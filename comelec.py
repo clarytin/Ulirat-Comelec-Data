@@ -10,7 +10,11 @@ REGION = 2
 PROVINCE = 3
 MUNICIPALITY = 4
 
-PRES = '+5587'
+PRESIDENT = '+5587'
+VICE_PRES = '+5588'
+SENATOR = '+5589'
+PARTY_LIST = '+11172'
+
 
 def setup(): 
     chrome_options = Options()
@@ -64,14 +68,44 @@ def get_vote_data(position):
 
     return df
 
+def get_stats(position):
+    div_id = "'resultDiv.'" + position
+    stats_div = soup.find(id=div_id).findChild("div", {'id': 'generalStatisticsVoters'})
+    stats = stats_div.findChildren("div", {'class': 'ng-binding'})
+
+    df = pd.DataFrame({stats[1]: [stats[2]],
+                       stats[3]: [stats[4]],
+                       stats[5]: [stats[6]],
+                       stats[7]: [stats[8]]})
+
+    return df
+
+
 driver = setup()
 choose_area()
 
 time.sleep(3)
 soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-pres_df = get_vote_data(PRES)
-print(pres_df)
+pres_votes = get_vote_data(PRESIDENT)
+pres_stats = get_stats(PRESIDENT)
+print(pres_stats)
 
+vp_votes = get_vote_data(VICE_PRES)
+vp_stats = get_stats(VICE_PRES)
+print(vp_stats)
+
+
+sen_votes = get_vote_data(SENATOR)
+sen_stats = get_stats(SENATOR)
+print(sen_stats)
+
+partylist_votes = get_vote_data(PARTY_LIST)
+partylist_stats = get_stats(PARTY_LIST)
+print(partylist_stats)
+
+
+# to stack the dataframes on top of eachother
+# https://stackoverflow.com/questions/67519829/writing-multiple-data-frame-in-same-excel-sheet-one-below-other-in-python
 
 
