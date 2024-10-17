@@ -14,7 +14,13 @@ PRESIDENT = '+5587'
 VICE_PRES = '+5588'
 SENATOR = '+5589'
 PARTY_LIST = '+11172'
-
+MEMBER_HOR = 'MEMBER, HOUSE OF REPRESENTATIVES'
+GOVERNOR = 'PROVINCIAL GOVERNOR'
+VICE_GOV = 'PROVINCIAL VICE-GOVERNOR'
+SANG_PANLA = 'PANLALAWIGAN'
+MAYOR = 'MAYOR'
+VICE_MAYOR = 'VICE-MAYOR'
+SANG_BAYAN = 'BAYAN'
 
 def setup(): 
     chrome_options = Options()
@@ -29,7 +35,7 @@ def setup():
 
 def choose_area():
     click_filter_btn(REGION)
-    click_dropdown(REGION, 1)
+    click_dropdown(REGION, 2)
     click_filter_btn(PROVINCE)
     click_dropdown(PROVINCE, 1)
     click_filter_btn(MUNICIPALITY)
@@ -53,9 +59,19 @@ def click_dropdown(area, option):
 def clean(data):
     return data.getText()[1:-1]
 
+def get_data_div(position):
+    if position in [PRESIDENT, VICE_PRES, SENATOR, PARTY_LIST]:
+        div_id = "'resultDiv.'" + position
+        results_div = soup.find(id=div_id)
+        return results_div
+    
+    div = soup.select(':-soup-contains("' + position + '")')[-1]
+    return div.parent.parent.find_next_sibling()
+
+
+
 def get_vote_data(position):
-    div_id = "'resultDiv.'" + position
-    results_div = soup.find(id=div_id).findChild("div")
+    results_div = get_data_div(position).findChild("div")
     results = results_div.findChildren("div", {'class': 'candidate-result'})
 
     df = pd.DataFrame(columns=['Candidate','Votes','Percentage'])
@@ -69,8 +85,7 @@ def get_vote_data(position):
     return df
 
 def get_stats(position):
-    div_id = "'resultDiv.'" + position
-    stats_div = soup.find(id=div_id).findChild("div", {'id': 'generalStatisticsVoters'})
+    stats_div = get_data_div(position).findChild("div", {'id': 'generalStatisticsVoters'})
     stats = stats_div.findChildren("div", {'class': 'ng-binding'})
 
     df = pd.DataFrame({stats[1]: [stats[2]],
@@ -86,23 +101,21 @@ choose_area()
 
 time.sleep(3)
 soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-pres_votes = get_vote_data(PRESIDENT)
-pres_stats = get_stats(PRESIDENT)
-print(pres_stats)
-
-vp_votes = get_vote_data(VICE_PRES)
-vp_stats = get_stats(VICE_PRES)
-print(vp_stats)
+#pres_votes = get_vote_data(PRESIDENT)
+#print(pres_votes)
+#pres_stats = get_stats(PRESIDENT)
+#print(pres_stats)
 
 
-sen_votes = get_vote_data(SENATOR)
-sen_stats = get_stats(SENATOR)
-print(sen_stats)
+mayor_votes = get_vote_data(MAYOR)
+mayor_stats = get_stats(MAYOR)
+print(mayor_votes)
+print(mayor_stats)
 
-partylist_votes = get_vote_data(PARTY_LIST)
-partylist_stats = get_stats(PARTY_LIST)
-print(partylist_stats)
+vm_votes = get_vote_data(VICE_MAYOR)
+vm_stats = get_stats(VICE_MAYOR)
+print(vm_votes)
+print(vm_stats)
 
 
 # to stack the dataframes on top of eachother
