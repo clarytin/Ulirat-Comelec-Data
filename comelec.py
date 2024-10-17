@@ -22,6 +22,7 @@ MAYOR = 'MAYOR'
 VICE_MAYOR = 'VICE-MAYOR'
 SANG_BAYAN = 'BAYAN'
 
+
 def setup(): 
     chrome_options = Options()
     chrome_options.add_experimental_option("detach", True)
@@ -66,9 +67,15 @@ def get_data_div(position):
         return results_div
     
     div = soup.select(':-soup-contains("' + position + '")')[-1]
+
+    # Previous line goes to VICE-MAYOR if position is MAYOR
+    # Manually navigate to the div I need
+    if position == MAYOR:
+        div = div.parent.parent
+        div = div.parent.parent.parent.find_previous_sibling()
+        div = div.findChild("span", {'class': 'ng-binding'})
+    
     return div.parent.parent.find_next_sibling()
-
-
 
 def get_vote_data(position):
     results_div = get_data_div(position).findChild("div")
@@ -101,21 +108,24 @@ choose_area()
 
 time.sleep(3)
 soup = BeautifulSoup(driver.page_source, 'html.parser')
+
 #pres_votes = get_vote_data(PRESIDENT)
 #print(pres_votes)
 #pres_stats = get_stats(PRESIDENT)
 #print(pres_stats)
 
-
 mayor_votes = get_vote_data(MAYOR)
-mayor_stats = get_stats(MAYOR)
 print(mayor_votes)
+
+mayor_stats = get_stats(MAYOR)
 print(mayor_stats)
 
 vm_votes = get_vote_data(VICE_MAYOR)
-vm_stats = get_stats(VICE_MAYOR)
 print(vm_votes)
+
+vm_stats = get_stats(VICE_MAYOR)
 print(vm_stats)
+
 
 
 # to stack the dataframes on top of eachother
