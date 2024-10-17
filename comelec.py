@@ -34,13 +34,13 @@ def setup():
 
     return driver
 
-def choose_area():
+def choose_area(reg, prov, mun):
     click_filter_btn(REGION)
-    click_dropdown(REGION, 2)
+    click_dropdown(REGION, reg)
     click_filter_btn(PROVINCE)
-    click_dropdown(PROVINCE, 1)
+    click_dropdown(PROVINCE, prov)
     click_filter_btn(MUNICIPALITY)
-    click_dropdown(MUNICIPALITY, 1)
+    click_dropdown(MUNICIPALITY, mun)
 
 def click_filter_btn(area):
     xpath = '//*[@id="container"]/ui-view/div/div/div[1]/nav/div/ul/li/div[4]/div'
@@ -104,7 +104,7 @@ def get_stats(position):
 
 
 driver = setup()
-choose_area()
+choose_area(1, 1, 1)
 
 time.sleep(3)
 soup = BeautifulSoup(driver.page_source, 'html.parser')
