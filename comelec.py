@@ -23,6 +23,21 @@ MAYOR = 'MAYOR'
 VICE_MAYOR = 'VICE-MAYOR'
 SANG_BAYAN = 'BAYAN'
 
+positions = [PRESIDENT, VICE_PRES, SENATOR, PARTY_LIST, 
+             MEMBER_HOR, GOVERNOR, VICE_GOV, SANG_PANLA, MAYOR, VICE_MAYOR, SANG_BAYAN]
+
+title = {PRESIDENT: "PRESIDENT PHILIPPINES",
+         VICE_PRES: "VICE PRESIDENT PHILIPPINES",
+         SENATOR: "SENATOR PHILIPPINES",
+         PARTY_LIST: "PARTY LIST PHILIPPINES",
+         MEMBER_HOR: "MEMBER, HOUSE OF REPRESENTATIVES",
+         GOVERNOR: "PROVINCIAL GOVERNOR",
+         VICE_GOV: "PROVINCIAL VICE-GOVERNOR",
+         SANG_PANLA: "MEMBER, SANGGUNIANG PANLALAWIGAN",
+         MAYOR: "MAYOR",
+         VICE_MAYOR: "VICE-MAYOR",
+         SANG_BAYAN: "MEMBER, SANGGUNIANG BAYAN"}
+
 
 def setup(): 
     chrome_options = Options()
@@ -96,10 +111,10 @@ def get_stats(position):
     stats_div = get_data_div(position).findChild("div", {'id': 'generalStatisticsVoters'})
     stats = stats_div.findChildren("div", {'class': 'ng-binding'})
 
-    df = pd.DataFrame({stats[1]: [stats[2]],
-                       stats[3]: [stats[4]],
-                       stats[5]: [stats[6]],
-                       stats[7]: [stats[8]]})
+    df = pd.DataFrame({stats[1].text: [stats[2].text],
+                       stats[3].text: [stats[4].text],
+                       stats[5].text: [stats[6].text],
+                       stats[7].text: [stats[8].text]})
 
     return df
 
@@ -110,6 +125,36 @@ def get_name(area):
     name = driver.find_element(By.XPATH, xpath)
     return name.text
 
+def init_workbook():
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "DELETE"
+    wb.save(filename)
+    return wb
+
+def write_data(filename):
+    curr_row = 1
+
+    for position in positions:
+        votes = get_vote_data(position)
+        stats = get_stats(position)
+
+        wb = openpyxl.load_workbook(filename)
+        ws = wb[get_name(MUNICIPALITY)]
+        ws.cell(column=1, row=curr_row, value=title[position])
+        wb.save(filename)
+        curr_row += 1
+
+        with pd.ExcelWriter(filename, mode="a", engine="openpyxl", if_sheet_exists="overlay") as writer:
+            votes.to_excel(writer, sheet_name=get_name(MUNICIPALITY), startrow=curr_row, index=False)
+        curr_row += votes.shape[0] + 2
+
+        with pd.ExcelWriter(filename, mode="a", engine="openpyxl", if_sheet_exists="overlay") as writer:
+            stats.to_excel(writer, sheet_name=get_name(MUNICIPALITY), startrow=curr_row, index=False) 
+        curr_row += stats.shape[0] + 4
+
+
+
 
 driver = setup()
 choose_area(1, 1, 1)
@@ -117,22 +162,17 @@ choose_area(1, 1, 1)
 time.sleep(3)
 soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-pres_votes = get_vote_data(PRESIDENT)
 
 filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
-wb = openpyxl.Workbook()
-ws = wb.active
-ws.title = "DELETE"
+wb = init_workbook()
 
 ws = wb.create_sheet(get_name(MUNICIPALITY)) 
-ws.cell(column=1, row=ws.max_row, value="PRESIDENT")
-
 
 del wb["DELETE"]
 wb.save(filename)
 
-with pd.ExcelWriter(filename, mode="a", engine="openpyxl", if_sheet_exists="overlay") as writer:
-    pres_votes.to_excel(writer, sheet_name=get_name(MUNICIPALITY), startrow=ws.max_row) 
+write_data( filename)
+
 
 
 # to stack the dataframes on top of eachother
