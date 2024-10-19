@@ -3,6 +3,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import pandas as pd
+import openpyxl
 import time
 
 
@@ -84,7 +85,7 @@ def get_vote_data(position):
     df = pd.DataFrame(columns=['Candidate','Votes','Percentage'])
 
     for i in range(0, len(results), 3):
-        row = pd.DataFrame({'Candidate':[results[i]],
+        row = pd.DataFrame({'Candidate':[results[i].text],
                             'Votes': [clean(results[i+1])],
                             'Percentage': [clean(results[i+2])]})
         df = pd.concat([df, row], ignore_index=True)
@@ -102,6 +103,13 @@ def get_stats(position):
 
     return df
 
+def get_name(area):
+    xpath = ' //*[@id="container"]/ui-view/div/div/div[1]/nav/div/ul/li/div[4]/div'
+    xpath += '[' + str(area) + ']'
+    xpath += '/nav-filter/div/span/span'
+    name = driver.find_element(By.XPATH, xpath)
+    return name.text
+
 
 driver = setup()
 choose_area(1, 1, 1)
@@ -109,23 +117,22 @@ choose_area(1, 1, 1)
 time.sleep(3)
 soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-#pres_votes = get_vote_data(PRESIDENT)
-#print(pres_votes)
-#pres_stats = get_stats(PRESIDENT)
-#print(pres_stats)
+pres_votes = get_vote_data(PRESIDENT)
 
-mayor_votes = get_vote_data(MAYOR)
-print(mayor_votes)
+filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
+wb = openpyxl.Workbook()
+ws = wb.active
+ws.title = "DELETE"
 
-mayor_stats = get_stats(MAYOR)
-print(mayor_stats)
+ws = wb.create_sheet(get_name(MUNICIPALITY)) 
+ws.cell(column=1, row=ws.max_row, value="PRESIDENT")
 
-vm_votes = get_vote_data(VICE_MAYOR)
-print(vm_votes)
 
-vm_stats = get_stats(VICE_MAYOR)
-print(vm_stats)
+del wb["DELETE"]
+wb.save(filename)
 
+with pd.ExcelWriter(filename, mode="a", engine="openpyxl", if_sheet_exists="overlay") as writer:
+    pres_votes.to_excel(writer, sheet_name=get_name(MUNICIPALITY), startrow=ws.max_row) 
 
 
 # to stack the dataframes on top of eachother
