@@ -38,6 +38,11 @@ title = {PRESIDENT: "PRESIDENT PHILIPPINES",
          VICE_MAYOR: "VICE-MAYOR",
          SANG_BAYAN: "MEMBER, SANGGUNIANG BAYAN"}
 
+# Number 4 is skipped on the website
+region_idx = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+global driver
+global soup
+
 
 def setup(): 
     chrome_options = Options()
@@ -132,6 +137,12 @@ def init_workbook():
     wb.save(filename)
     return wb
 
+def write_title(filename, position, curr_row):
+    wb = openpyxl.load_workbook(filename)
+    ws = wb[get_name(MUNICIPALITY)]
+    ws.cell(column=1, row=curr_row, value=title[position])
+    wb.save(filename)
+
 def write_data(filename):
     curr_row = 1
 
@@ -139,40 +150,69 @@ def write_data(filename):
         votes = get_vote_data(position)
         stats = get_stats(position)
 
-        wb = openpyxl.load_workbook(filename)
-        ws = wb[get_name(MUNICIPALITY)]
-        ws.cell(column=1, row=curr_row, value=title[position])
-        wb.save(filename)
+        write_title(filename, position, curr_row)
         curr_row += 1
 
         with pd.ExcelWriter(filename, mode="a", engine="openpyxl", if_sheet_exists="overlay") as writer:
             votes.to_excel(writer, sheet_name=get_name(MUNICIPALITY), startrow=curr_row, index=False)
-        curr_row += votes.shape[0] + 2
-
-        with pd.ExcelWriter(filename, mode="a", engine="openpyxl", if_sheet_exists="overlay") as writer:
+            curr_row += votes.shape[0] + 2
             stats.to_excel(writer, sheet_name=get_name(MUNICIPALITY), startrow=curr_row, index=False) 
-        curr_row += stats.shape[0] + 4
+            curr_row += stats.shape[0] + 4
 
 
 
+WHAT ARE WE DOING RIGHT NOW?
+We're gonna test out print(region_name), which refers to the National Positions - "name"
+And then compare it with the dropdown Menu
+But first we check that the menu is there
+only have to check the municipality one because that's what we're working on right now 
 
 driver = setup()
-choose_area(1, 1, 1)
+choose_area(1, 1, 14)
+region_name = driver.find_elements_by_class_name("region-name-label").text
+print(region_name)
+
+
 
 time.sleep(3)
 soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-
 filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
 wb = init_workbook()
-
 ws = wb.create_sheet(get_name(MUNICIPALITY)) 
-
 del wb["DELETE"]
 wb.save(filename)
 
-write_data( filename)
+write_data(filename)
 
+time.sleep(5)
+province += 1
+
+'''
+province_end = False
+province = 1
+while province_end == False:
+
+    driver = setup()
+    choose_area(1, 1, province)
+
+    time.sleep(3)
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+    filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
+    wb = init_workbook()
+    ws = wb.create_sheet(get_name(MUNICIPALITY)) 
+    del wb["DELETE"]
+    wb.save(filename)
+
+    write_data(filename)
+
+    time.sleep(5)
+    province += 1
+
+'''
+#1. If region name doesn't match the header (national positions - ____
+#2. If the thing loaded at all - load it again 3 x
 
 
 # to stack the dataframes on top of eachother
