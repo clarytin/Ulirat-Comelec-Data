@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import openpyxl
 import time
+import traceback
 
 
 REGION = 2
@@ -42,7 +43,7 @@ title = {PRESIDENT: "PRESIDENT PHILIPPINES",
          SANG_PANLU: "MEMBER, SANGGUNIANG PANLUNGSOD"}
 
 # Number 4 is skipped on the website
-region_idx = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+region_idx = [2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
 global driver
 global soup
 global wb
@@ -66,6 +67,7 @@ def choose_area(reg, prov, mun):
     click_dropdown(PROVINCE, prov)
     click_filter_btn(MUNICIPALITY)
     click_dropdown(MUNICIPALITY, mun)
+
 
 def click_filter_btn(area):
     xpath = '//*[@id="container"]/ui-view/div/div/div[1]/nav/div/ul/li/div[4]/div'
@@ -91,7 +93,14 @@ def get_data_div(position):
         results_div = soup.find(id=div_id)
         return results_div
     
-    div = soup.select(':-soup-contains("' + position + '")')[-1]
+    try:
+        div = soup.select(':-soup-contains("' + position + '")')[-1]
+    except IndexError:
+        print(position)
+        print("HERES")
+        if position == SANG_BAYAN:
+            # someone misspelled this
+            div = soup.select(':-soup-contains("SANGUNIANG BAYAN")')[-1]
  
     # Previous line goes to VICE-MAYOR if position is MAYOR
     # Manually navigate to the div I need
@@ -183,41 +192,62 @@ def create_worksheet(muni):
     wb.save(filename)
 
 
-reg = 1
-prov = 1
-muni = 1
 failures = 0
 
-while(True):
-    try:
-        driver = setup()
-        choose_area(reg, prov, muni)
-        time.sleep(3)
+for reg in region_idx:
+    prov = 1
 
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
-
-        create_worksheet(muni)
-        write_data(filename, get_region())
-
-        muni += 1
+    while(True):
+        muni = 1
         failures = 0
-
-
-    except Exception as e: 
-        print(e)        
-        print("failure " + str(failures) + " on region: " + \
-              str(reg) + ", province: " + str(prov) + ", muni: " + str(muni))
         
-        if muni != 1 and failures != 5:
-            wb = openpyxl.load_workbook(filename)
-            del wb[get_name(MUNICIPALITY)]
-            wb.save(filename) 
+        while(True):
+            if failures == 5:
+                    break
+            try:
+                driver = setup()
+                choose_area(reg, prov, muni)
+                time.sleep(3)
 
-        failures += 1
-        continue
+                soup = BeautifulSoup(driver.page_source, 'html.parser')
+                filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
 
-    finally:
-        driver.close()
-        if failures == 5:
+                create_worksheet(muni)
+                write_data(filename, get_region())
+
+                muni += 1
+                failures = 0
+
+            except NoSuchElementException:
+                print("may be end")
+                failures += 1
+                continue
+
+            except Exception as e: 
+                print(e)        
+                #print(traceback.format_exc())
+                print("failure " + str(failures) + " on region: " + \
+                    str(reg) + ", province: " + str(prov) + ", muni: " + str(muni))
+                
+                if muni != 1 and failures != 5:
+                    wb = openpyxl.load_workbook(filename)
+                    del wb[get_name(MUNICIPALITY)]
+                    wb.save(filename) 
+
+                failures += 1
+                continue
+
+            finally:
+                driver.close()
+                
+        
+        print("----")
+        print(reg)
+        print(prov)
+        print(muni)
+        print("----")
+
+        if muni == 1:
             break
+
+        prov += 1
