@@ -221,16 +221,3 @@ while(True):
         driver.close()
         if failures == 5:
             break
-
-        
-
-
-
-
-# fix the fact that the sangguniang panglungsod title is stitle sang bayan
-
-
-# to stack the dataframes on top of eachother
-# https://stackoverflow.com/questions/67519829/writing-multiple-data-frame-in-same-excel-sheet-one-below-other-in-python
-
-
