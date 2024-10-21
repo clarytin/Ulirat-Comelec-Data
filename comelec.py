@@ -22,7 +22,7 @@ VICE_GOV = 'PROVINCIAL VICE-GOVERNOR'
 SANG_PANLA = 'PANLALAWIGAN'
 MAYOR = 'MAYOR'
 VICE_MAYOR = 'VICE-MAYOR'
-SANG_BAYAN = 'BAYAN'
+SANG_BAYAN = 'SANGGUNIANG BAYAN'
 SANG_PANLU = 'PANLUNGSOD'
 
 positions = [PRESIDENT, VICE_PRES, SENATOR, PARTY_LIST, 
@@ -177,7 +177,7 @@ def write_data(filename, target_region):
 #only have to check the municipality one because that's what we're working on right now 
 reg = 1
 prov = 1
-muni = 11
+muni = 1
 
 failures = 0
 end = False
@@ -189,54 +189,45 @@ while(True):
     try:
         driver = setup()
         choose_area(reg, prov, muni)
-    except NoSuchElementException:
-        driver.close()
-        failures += 1
-        print("NoSuchElement on the city (could be end)")
-        print("failure " + str(failures) + " on region: " + str(reg) + ", province: " + str(prov) + ", muni: " + str(muni))
-        continue
-    except ElementClickInterceptedException:
-        driver.close()
-        print ("ElementClickInterceptedException")
-        failures += 1
-        print("failure " + str(failures) + " on region: " + str(reg) + ", province: " + str(prov) + ", muni: " + str(muni))
-        continue
-
-    time.sleep(3)
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-    target_region = driver.find_element(By.XPATH, '//*[@id="container"]/ui-view/div/div/div[1]/nav/div/ul/li/div[4]/div[4]/nav-filter/div/span/span').text
-
-    filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
-
-    if muni == 1:
-        wb = init_workbook()
-        ws = wb.create_sheet(get_name(MUNICIPALITY)) 
-        del wb["DELETE"]
-    else:
-        wb = openpyxl.load_workbook(filename)
-        ws = wb.create_sheet(get_name(MUNICIPALITY)) 
 
 
-    wb.save(filename) 
-    try:
+        time.sleep(3)
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+        target_region = driver.find_element(By.XPATH, '//*[@id="container"]/ui-view/div/div/div[1]/nav/div/ul/li/div[4]/div[4]/nav-filter/div/span/span').text
+
+        filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
+
+        if muni == 1:
+            wb = init_workbook()
+            ws = wb.create_sheet(get_name(MUNICIPALITY)) 
+            del wb["DELETE"]
+        else:
+            wb = openpyxl.load_workbook(filename)
+            ws = wb.create_sheet(get_name(MUNICIPALITY)) 
+
+        wb.save(filename) 
         write_data(filename, target_region)
+
+        muni += 1
+        failures = 0
+
     except Exception as e: 
         print(e)        
         failures += 1
         print("failure " + str(failures) + " on region: " + str(reg) + ", province: " + str(prov) + ", muni: " + str(muni))
-        if muni != 1:
+        if muni != 1 and failures != 5:
             wb = openpyxl.load_workbook(filename)
             del wb[get_name(MUNICIPALITY)]
             wb.save(filename) 
         continue
+
     finally:
         driver.close()
 
         
 
-    muni += 1
-    failures = 0
+
 
 
 # fix the fact that the sangguniang panglungsod title is stitle sang bayan
