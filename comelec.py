@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import NoSuchElementException
 from bs4 import BeautifulSoup
 import pandas as pd
 import openpyxl
@@ -42,6 +43,7 @@ title = {PRESIDENT: "PRESIDENT PHILIPPINES",
 region_idx = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
 global driver
 global soup
+global wb
 
 
 def setup(): 
@@ -158,59 +160,61 @@ def write_data(filename):
             curr_row += votes.shape[0] + 2
             stats.to_excel(writer, sheet_name=get_name(MUNICIPALITY), startrow=curr_row, index=False) 
             curr_row += stats.shape[0] + 4
+        
 
 
 
-WHAT ARE WE DOING RIGHT NOW?
-We're gonna test out print(region_name), which refers to the National Positions - "name"
-And then compare it with the dropdown Menu
-But first we check that the menu is there
-only have to check the municipality one because that's what we're working on right now 
+#WHAT ARE WE DOING RIGHT NOW?
+#We're gonna test out print(region_name), which refers to the National Positions - "name"
+#And then compare it with the dropdown Menu
+#But first we check that the menu is there
+#only have to check the municipality one because that's what we're working on right now 
+reg = 1
+prov = 1
+muni = 1
 
-driver = setup()
-choose_area(1, 1, 14)
-region_name = driver.find_elements_by_class_name("region-name-label").text
-print(region_name)
+failures = 0
+end = False
 
 
+while(muni < 3):
+    try:
+        driver = setup()
+        choose_area(reg, prov, muni)
 
-time.sleep(3)
-soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
-wb = init_workbook()
-ws = wb.create_sheet(get_name(MUNICIPALITY)) 
-del wb["DELETE"]
-wb.save(filename)
-
-write_data(filename)
-
-time.sleep(5)
-province += 1
-
-'''
-province_end = False
-province = 1
-while province_end == False:
-
-    driver = setup()
-    choose_area(1, 1, province)
+    except NoSuchElementException:
+        driver.close()
+        if failures == 2:
+            break
+        else:
+            failures += 1
+        continue
 
     time.sleep(3)
     soup = BeautifulSoup(driver.page_source, 'html.parser')
 
+    target_region = driver.find_element(By.XPATH, '//*[@id="container"]/ui-view/div/div/div[1]/nav/div/ul/li/div[4]/div[4]/nav-filter/div/span/span')
+
     filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
-    wb = init_workbook()
-    ws = wb.create_sheet(get_name(MUNICIPALITY)) 
-    del wb["DELETE"]
-    wb.save(filename)
 
+    if muni == 1:
+        wb = init_workbook()
+        ws = wb.create_sheet(get_name(MUNICIPALITY)) 
+        del wb["DELETE"]
+    else:
+        wb = openpyxl.load_workbook(filename)
+        ws = wb.create_sheet(get_name(MUNICIPALITY)) 
+
+
+    wb.save(filename) 
     write_data(filename)
+    driver.close()
 
-    time.sleep(5)
-    province += 1
 
-'''
+    muni += 1
+    failures = 0
+
+
 #1. If region name doesn't match the header (national positions - ____
 #2. If the thing loaded at all - load it again 3 x
 
