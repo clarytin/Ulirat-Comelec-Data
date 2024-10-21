@@ -1,7 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from bs4 import BeautifulSoup
 import pandas as pd
 import openpyxl
@@ -23,9 +23,10 @@ SANG_PANLA = 'PANLALAWIGAN'
 MAYOR = 'MAYOR'
 VICE_MAYOR = 'VICE-MAYOR'
 SANG_BAYAN = 'BAYAN'
+SANG_PANLU = 'PANLUNGSOD'
 
 positions = [PRESIDENT, VICE_PRES, SENATOR, PARTY_LIST, 
-             MEMBER_HOR, GOVERNOR, VICE_GOV, SANG_PANLA, MAYOR, VICE_MAYOR, SANG_BAYAN]
+             MEMBER_HOR, GOVERNOR, VICE_GOV, SANG_PANLA, MAYOR, VICE_MAYOR]
 
 title = {PRESIDENT: "PRESIDENT PHILIPPINES",
          VICE_PRES: "VICE PRESIDENT PHILIPPINES",
@@ -37,7 +38,8 @@ title = {PRESIDENT: "PRESIDENT PHILIPPINES",
          SANG_PANLA: "MEMBER, SANGGUNIANG PANLALAWIGAN",
          MAYOR: "MAYOR",
          VICE_MAYOR: "VICE-MAYOR",
-         SANG_BAYAN: "MEMBER, SANGGUNIANG BAYAN"}
+         SANG_BAYAN: "MEMBER, SANGGUNIANG BAYAN",
+         SANG_PANLU: "MEMBER, SANGGUNIANG PANLUNGSOD"}
 
 # Number 4 is skipped on the website
 region_idx = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
@@ -78,7 +80,7 @@ def click_dropdown(area, option):
     xpath += '/nav-filter/div/span/div/div/div[2]/ul/li'
     xpath += '[' + str(option) + ']'
     elem = driver.find_element(By.XPATH, xpath)
-    elem.click()
+    driver.execute_script("arguments[0].click();", elem)
 
 def clean(data):
     return data.getText()[1:-1]
@@ -90,7 +92,7 @@ def get_data_div(position):
         return results_div
     
     div = soup.select(':-soup-contains("' + position + '")')[-1]
-
+ 
     # Previous line goes to VICE-MAYOR if position is MAYOR
     # Manually navigate to the div I need
     if position == MAYOR:
@@ -145,10 +147,15 @@ def write_title(filename, position, curr_row):
     ws.cell(column=1, row=curr_row, value=title[position])
     wb.save(filename)
 
-def write_data(filename):
+def write_data(filename, target_region):
     curr_row = 1
+    curr_positions = [i for i in positions]
+    if "CITY" in target_region:
+        curr_positions.append(SANG_PANLU)
+    else:
+        curr_positions.append(SANG_BAYAN)
 
-    for position in positions:
+    for position in curr_positions:
         votes = get_vote_data(position)
         stats = get_stats(position)
 
@@ -159,8 +166,7 @@ def write_data(filename):
             votes.to_excel(writer, sheet_name=get_name(MUNICIPALITY), startrow=curr_row, index=False)
             curr_row += votes.shape[0] + 2
             stats.to_excel(writer, sheet_name=get_name(MUNICIPALITY), startrow=curr_row, index=False) 
-            curr_row += stats.shape[0] + 4
-        
+            curr_row += stats.shape[0] + 4        
 
 
 
@@ -171,29 +177,35 @@ def write_data(filename):
 #only have to check the municipality one because that's what we're working on right now 
 reg = 1
 prov = 1
-muni = 1
+muni = 11
 
 failures = 0
 end = False
 
 
-while(muni < 3):
+while(True):
+    if failures == 5:
+        break
     try:
         driver = setup()
         choose_area(reg, prov, muni)
-
     except NoSuchElementException:
         driver.close()
-        if failures == 2:
-            break
-        else:
-            failures += 1
+        failures += 1
+        print("NoSuchElement on the city (could be end)")
+        print("failure " + str(failures) + " on region: " + str(reg) + ", province: " + str(prov) + ", muni: " + str(muni))
+        continue
+    except ElementClickInterceptedException:
+        driver.close()
+        print ("ElementClickInterceptedException")
+        failures += 1
+        print("failure " + str(failures) + " on region: " + str(reg) + ", province: " + str(prov) + ", muni: " + str(muni))
         continue
 
     time.sleep(3)
     soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-    target_region = driver.find_element(By.XPATH, '//*[@id="container"]/ui-view/div/div/div[1]/nav/div/ul/li/div[4]/div[4]/nav-filter/div/span/span')
+    target_region = driver.find_element(By.XPATH, '//*[@id="container"]/ui-view/div/div/div[1]/nav/div/ul/li/div[4]/div[4]/nav-filter/div/span/span').text
 
     filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
 
@@ -207,16 +219,27 @@ while(muni < 3):
 
 
     wb.save(filename) 
-    write_data(filename)
-    driver.close()
+    try:
+        write_data(filename, target_region)
+    except Exception as e: 
+        print(e)        
+        failures += 1
+        print("failure " + str(failures) + " on region: " + str(reg) + ", province: " + str(prov) + ", muni: " + str(muni))
+        if muni != 1:
+            wb = openpyxl.load_workbook(filename)
+            del wb[get_name(MUNICIPALITY)]
+            wb.save(filename) 
+        continue
+    finally:
+        driver.close()
 
+        
 
     muni += 1
     failures = 0
 
 
-#1. If region name doesn't match the header (national positions - ____
-#2. If the thing loaded at all - load it again 3 x
+# fix the fact that the sangguniang panglungsod title is stitle sang bayan
 
 
 # to stack the dataframes on top of eachother
