@@ -1,7 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
+from selenium.common.exceptions import NoSuchElementException
 from bs4 import BeautifulSoup
 import pandas as pd
 import openpyxl
@@ -189,7 +189,6 @@ def create_worksheet(muni):
         wb.create_sheet(get_name(MUNICIPALITY)) 
 
     wb.save(filename)
-
 
         
 failures = 0
