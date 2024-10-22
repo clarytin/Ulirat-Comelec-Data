@@ -97,8 +97,6 @@ def get_data_div(position):
     try:
         div = soup.select(':-soup-contains("' + position + '")')[-1]
     except IndexError:
-        print(position)
-        print("HERES")
         if position == SANG_BAYAN:
             # someone misspelled this
             div = soup.select(':-soup-contains("SANGUNIANG BAYAN")')[-1]
@@ -192,51 +190,8 @@ def create_worksheet(muni):
 
     wb.save(filename)
 
-reg = 16
-prov = 3
-failures = 0
-muni = 3
 
-while(True):
-    if failures == 5:
-            break
-    try:
-        driver = setup()
-        choose_area(reg, prov, muni)
-        time.sleep(1)
-
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
-
-        create_worksheet(muni)
-        write_data(filename, get_region())
-
-        muni += 1
-        failures = 0
-
-    except NoSuchElementException:
-        print("may be end")
-        failures += 1
-        continue
-
-    except Exception as e: 
-        print(e)        
-        #print(traceback.format_exc())
-        print("failure " + str(failures) + " on region: " + \
-            str(reg) + ", province: " + str(prov) + ", muni: " + str(muni))
         
-        if muni != 1 and failures != 5:
-            wb = openpyxl.load_workbook(filename)
-            del wb[get_name(MUNICIPALITY)]
-            wb.save(filename) 
-
-        failures += 1
-        continue
-
-    finally:
-        driver.close()
-        
-'''        
 failures = 0
 
 for reg in region_idx:
@@ -271,7 +226,7 @@ for reg in region_idx:
             except Exception as e: 
                 print(e)        
                 #print(traceback.format_exc())
-                print("failure " + str(failures) + " on region: " + \
+                print("Failure " + str(failures) + " on region: " + \
                     str(reg) + ", province: " + str(prov) + ", muni: " + str(muni))
                 
                 if muni != 1 and failures != 5:
@@ -285,15 +240,8 @@ for reg in region_idx:
             finally:
                 driver.close()
                 
-        
-        print("----")
-        print(reg)
-        print(prov)
-        print(muni)
-        print("----")
 
         if muni == 1:
             break
 
         prov += 1
-'''
