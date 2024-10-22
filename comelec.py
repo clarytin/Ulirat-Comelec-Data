@@ -56,7 +56,7 @@ def setup():
    
     driver = webdriver.Chrome(service = cService, options=chrome_options)
     driver.get('https://2022electionresults.comelec.gov.ph/#/coc/0')
-    driver.implicitly_wait(10)
+    driver.implicitly_wait(5)
 
     return driver
 
@@ -86,6 +86,7 @@ def click_dropdown(area, option):
 
 def clean(data):
     return data.getText()[1:-1]
+
 
 def get_data_div(position):
     if position in [PRESIDENT, VICE_PRES, SENATOR, PARTY_LIST]:
@@ -191,7 +192,51 @@ def create_worksheet(muni):
 
     wb.save(filename)
 
+reg = 16
+prov = 3
+failures = 0
+muni = 3
 
+while(True):
+    if failures == 5:
+            break
+    try:
+        driver = setup()
+        choose_area(reg, prov, muni)
+        time.sleep(1)
+
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        filename = 'data/' + get_name(REGION) + '/' + get_name(PROVINCE) + '.xlsx'
+
+        create_worksheet(muni)
+        write_data(filename, get_region())
+
+        muni += 1
+        failures = 0
+
+    except NoSuchElementException:
+        print("may be end")
+        failures += 1
+        continue
+
+    except Exception as e: 
+        print(e)        
+        #print(traceback.format_exc())
+        print("failure " + str(failures) + " on region: " + \
+            str(reg) + ", province: " + str(prov) + ", muni: " + str(muni))
+        
+        if muni != 1 and failures != 5:
+            wb = openpyxl.load_workbook(filename)
+            del wb[get_name(MUNICIPALITY)]
+            wb.save(filename) 
+
+        failures += 1
+        continue
+
+    finally:
+        driver.close()
+        
+'''        
 failures = 0
 
 for reg in region_idx:
@@ -251,3 +296,4 @@ for reg in region_idx:
             break
 
         prov += 1
+'''
